@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>초보용 코딩 사이트</title>
+<style>
+:root{
+  --dark-bg:#07101a;
+  --panel:#050812;
+  --muted:#99a0aa;
+  --grad-active: linear-gradient(135deg,#4df6d8,#42b8ff);
+  --grad-btn: linear-gradient(135deg,#3ecdfd,#2a8ef7);
+  --radius:12px;
+}
+*{box-sizing:border-box}
+body{margin:0;height:100vh;font-family:Inter,Arial,sans-serif;background:var(--dark-bg);color:#eaf6ff}
+header{
+  padding:12px 18px;display:flex;justify-content:space-between;align-items:center;
+  background:linear-gradient(180deg,#0f1a2b,#0b1320);border-bottom:1px solid rgba(255,255,255,0.03)
+}
+.title{font-weight:700}
+.header-actions{display:flex;gap:10px;align-items:center}
+.btn {
+  padding:8px 14px;border-radius:var(--radius);border:none;cursor:pointer;font-weight:600;
+  background:#0c1722;color:#dff3ff;
+}
+.btn.primary{background:var(--grad-btn);box-shadow:0 6px 18px rgba(46,140,255,0.12);color:white}
+.container{display:flex;gap:14px;padding:14px;height:calc(100vh - 64px)}
+.left{width:360px;background:var(--panel);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:12px}
+.tabs{display:flex;gap:8px}
+.tab {
+  flex:1;padding:10px;border-radius:10px;border:none;background:#051122;color:#cfe8ff;cursor:pointer;font-weight:700;
+}
+.tab.active{background:var(--grad-active);color:#022133;box-shadow:0 10px 28px rgba(34,180,255,0.12)}
+textarea#editor{
+  width:100%;height:420px;border-radius:8px;padding:12px;background:#020615;color:#e6f3ff;border:1px solid rgba(255,255,255,0.02);
+  font-family:Consolas,monospace;font-size:13px;resize:none;outline:none;
+}
+.controls{display:flex;gap:8px;align-items:center}
+.template-btn{padding:9px 12px;border-radius:10px;border:none;background:var(--grad-btn);color:white;cursor:pointer;font-weight:600}
+.meta{color:var(--muted);font-size:12px}
+.right{flex:1;display:flex;flex-direction:column;gap:12px}
+.preview{flex:1;background:white;border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,0.06)}
+iframe{width:100%;height:100%;border:0;background:white}
+.bottom{height:120px;background:linear-gradient(180deg,#06101a,#061420);border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+.header-actions .btn.primary { margin-left:0 }
+@media(max-width:900px){.container{flex-direction:column}.left{width:100%}}
+</style>
+</head>
+<body>
+<header>
+  <div class="title">초보용 코딩 사이트</div>
+  <div class="header-actions">
+    <button id="runBtn" class="btn primary" title="실행 (Ctrl/Cmd + Enter)">실행</button>
+    <button id="saveBtn" class="btn primary" title="저장">저장</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="left">
+    <div class="tabs">
+      <button id="tab-html" class="tab active">HTML</button>
+      <button id="tab-css"  class="tab">CSS</button>
+      <button id="tab-js"   class="tab">JS</button>
+    </div>
+
+    <textarea id="editor" spellcheck="false" placeholder="템플릿 불러오기를 누르거나 직접 작성하세요."></textarea>
+
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="display:flex;gap:8px">
+        <button id="loadTpl" class="template-btn">템플릿 불러오기</button>
+        <button id="resetBtn" class="template-btn" style="background:#0b1724;color:#cfe8ff">초기화</button>
+        <button id="checkBtn" class="template-btn" style="background:#0b1724;color:#cfe8ff">오류 점검</button>
+      </div>
+      <div id="lineInfo" class="meta">line 1</div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="preview"><iframe id="preview" sandbox="allow-scripts allow-same-origin"></iframe></div>
+    <div class="bottom"></div>
+  </div>
+</div>
+
+<script>
+const templates = {
+  html: `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>문서</title>
+</head>
+<body>
+<h1>Hello World</h1>
+<p>여기에 HTML을 작성하세요.</p>
+</body>
+</html>`,
+  css: `/* 기본 CSS 가이드 */\n/* body { margin:0; font-family:system-ui; } */`,
+  js: `// 기본 JS 가이드\n// document.addEventListener('DOMContentLoaded', ()=>{ console.log('hello') })`
+};
+
+let current = 'html';
+const state = { html:'', css:'', js:'' };
+
+const editor = document.getElementById('editor');
+const lineInfo = document.getElementById('lineInfo');
+const preview = document.getElementById('preview');
+
+const tabHtml = document.getElementById('tab-html');
+const tabCss = document.getElementById('tab-css');
+const tabJs  = document.getElementById('tab-js');
+const loadBtn = document.getElementById('loadTpl');
+const resetBtn = document.getElementById('resetBtn');
+const checkBtn = document.getElementById('checkBtn');
+const runBtn = document.getElementById('runBtn');
+const saveBtn = document.getElementById('saveBtn');
+
+function setActiveTab(name){
+  state[current] = editor.value; // 이전 탭 저장
+  current = name;
+  [tabHtml, tabCss, tabJs].forEach(t=>t.classList.remove('active'));
+  if(name==='html') tabHtml.classList.add('active');
+  if(name==='css')  tabCss.classList.add('active');
+  if(name==='js')   tabJs.classList.add('active');
+  editor.value = state[current] || '';
+  updateLine();
+}
+
+tabHtml.addEventListener('click', ()=> setActiveTab('html'));
+tabCss.addEventListener('click', ()=> setActiveTab('css'));
+tabJs.addEventListener('click', ()=> setActiveTab('js'));
+
+loadBtn.addEventListener('click', ()=>{
+  if(!templates[current]) return alert('템플릿 없음');
+  state[current] = templates[current];
+  editor.value = templates[current];
+  updateLine();
+});
+
+resetBtn.addEventListener('click', ()=>{
+  state[current]='';
+  editor.value='';
+  updateLine();
+});
+
+checkBtn.addEventListener('click', ()=>{
+  state[current]=editor.value;
+  const text = editor.value;
+  if(current==='html'){
+    const openTags=[];
+    const tagRe = /<([a-z]+)([^>]*)>/gi;
+    let match;
+    while(match=tagRe.exec(text)){
+      const tag=match[1];
+      if(!text.includes(`</${tag}>`) && !/\/>$/.test(match[0])) openTags.push(tag);
+    }
+    if(openTags.length) alert(`닫히지 않은 HTML 태그: ${openTags.join(', ')}`);
+    else alert('HTML 검사 통과');
+  } else if(current==='css'){
+    const open = (text.match(/{/g)||[]).length;
+    const close = (text.match(/}/g)||[]).length;
+    if(open!==close) alert(`CSS 중괄호 불일치 (${open} vs ${close})`);
+    else alert('CSS 검사 통과');
+  } else {
+    let p=0,b=0,br=0;
+    (text.match(/\(/g)||[]).forEach(()=>p++);
+    (text.match(/\)/g)||[]).forEach(()=>p--);
+    (text.match(/{/g)||[]).forEach(()=>b++);
+    (text.match(/}/g)||[]).forEach(()=>b--);
+    (text.match(/\[/g)||[]).forEach(()=>br++);
+    (text.match(/]/g)||[]).forEach(()=>br--);
+    if(p!==0||b!==0||br!==0) alert(`JS 괄호 불일치 (p:${p}, b:${b}, br:${br})`);
+    else alert('JS 검사 통과');
+  }
+});
+
+editor.addEventListener('input', ()=>{ state[current]=editor.value; updateLine(); });
+editor.addEventListener('click', updateLine);
+editor.addEventListener('keyup', updateLine);
+editor.addEventListener('mouseup', updateLine);
+
+function updateLine(){
+  const pos = editor.selectionStart||0;
+  const line = editor.value.substring(0,pos).split(/\r?\n/).length;
+  lineInfo.textContent = `line ${line}`;
+}
+
+runBtn.addEventListener('click', ()=>{
+  state[current]=editor.value;
+  const html=state.html||templates.html;
+  const css=state.css||'';
+  const js=state.js||'';
+  const output = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>${css}</style>
+</head>
+<body>
+${html}
+<script>${js}<\/script>
+</body>
+</html>`;
+  const doc = preview.contentDocument || preview.contentWindow.document;
+  doc.open(); doc.write(output); doc.close();
+});
+
+saveBtn.addEventListener('click', ()=>{
+  state[current]=editor.value;
+  const html=state.html||templates.html;
+  const css=state.css||'';
+  const js=state.js||'';
+  const content = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>${css}</style>
+</head>
+<body>
+${html}
+<script>${js}<\/script>
+</body>
+</html>`;
+  const blob = new Blob([content], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='project.html';
+  document.body.appendChild(a);
+  a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+
+document.addEventListener('keydown',(e)=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); runBtn.click(); }
+});
+
+setActiveTab('html');
+</script>
+</body>
+</html>
